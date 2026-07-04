@@ -1,0 +1,6 @@
+# Claude Code
+.claude/
+
+# .NET
+bin/
+obj/
