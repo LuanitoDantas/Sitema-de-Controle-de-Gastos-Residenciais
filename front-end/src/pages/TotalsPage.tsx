@@ -8,15 +8,15 @@ function formatBRL(value: number): string {
 }
 
 /**
- * Determines the CSS color for a balance cell.
- * - Positive balance → green  (person has more income than expenses)
+ * Determines the CSS class for a balance value.
+ * - Positive balance → green  (more income than expenses)
  * - Negative balance → red    (expenses exceed income)
- * - Zero balance     → gray   (exactly balanced)
+ * - Zero balance     → neutral gray
  */
-function balanceColor(balance: number): string {
-  if (balance > 0) return '#2e7d32';
-  if (balance < 0) return '#c62828';
-  return '#757575';
+function balanceClass(balance: number): string {
+  if (balance > 0) return 'amount-positive';
+  if (balance < 0) return 'amount-negative';
+  return 'amount-neutral';
 }
 
 export default function TotalsPage() {
@@ -29,73 +29,92 @@ export default function TotalsPage() {
       .catch(() => setError('Erro ao carregar totais.'));
   }, []);
 
-  if (error) {
-    return (
-      <main style={{ padding: '2rem' }}>
-        <h1>Totais</h1>
-        <p style={{ color: '#c62828' }}>{error}</p>
-      </main>
-    );
-  }
-
-  if (!totals) {
-    return (
-      <main style={{ padding: '2rem' }}>
-        <h1>Totais</h1>
-        <p>Carregando...</p>
-      </main>
-    );
-  }
-
-  const { people, grandTotal } = totals;
-
   return (
-    <main style={{ padding: '2rem' }}>
-      <h1>Totais</h1>
+    <main>
+      <header className="page-header">
+        <span className="page-eyebrow">Totais</span>
+        <h1>Panorama financeiro</h1>
+        <p className="page-subtitle">Receitas, despesas e saldo, por pessoa e no total da casa.</p>
+      </header>
 
-      {people.length === 0 ? (
-        <p>Nenhum dado disponível.</p>
-      ) : (
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Total Receitas</th>
-              <th>Total Despesas</th>
-              <th>Saldo</th>
-            </tr>
-          </thead>
-          <tbody>
-            {people.map((pt) => (
-              <tr key={pt.personId}>
-                <td>{pt.name}</td>
-                <td>{formatBRL(pt.totalIncome)}</td>
-                <td>{formatBRL(pt.totalExpenses)}</td>
-                {/* Balance color reflects financial standing: green = positive, red = negative, gray = neutral */}
-                <td style={{ color: balanceColor(pt.balance), fontWeight: 600 }}>
-                  {formatBRL(pt.balance)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-          {/* Grand total row styled distinctly to stand out from per-person rows */}
-          <tfoot>
-            <tr
-              style={{
-                backgroundColor: '#37474f',
-                color: '#ffffff',
-                fontWeight: 'bold',
-              }}
-            >
-              <td>Total Geral</td>
-              <td>{formatBRL(grandTotal.totalIncome)}</td>
-              <td>{formatBRL(grandTotal.totalExpenses)}</td>
-              <td style={{ color: balanceColor(grandTotal.balance) }}>
-                {formatBRL(grandTotal.balance)}
-              </td>
-            </tr>
-          </tfoot>
-        </table>
+      {error && <p className="message-banner error">{error}</p>}
+
+      {!error && !totals && <p className="page-subtitle">Carregando…</p>}
+
+      {totals && (
+        <>
+          {/* Stat tiles — headline figures for the whole household */}
+          <div className="stat-grid">
+            <div className="stat-tile">
+              <span className="stat-label">
+                <span className="stat-dot" style={{ backgroundColor: 'var(--good)' }} />
+                Receita total
+              </span>
+              <div className="stat-value amount-positive">{formatBRL(totals.grandTotal.totalIncome)}</div>
+            </div>
+            <div className="stat-tile">
+              <span className="stat-label">
+                <span className="stat-dot" style={{ backgroundColor: 'var(--critical)' }} />
+                Despesa total
+              </span>
+              <div className="stat-value amount-negative">{formatBRL(totals.grandTotal.totalExpenses)}</div>
+            </div>
+            <div className="stat-tile">
+              <span className="stat-label">
+                <span className="stat-dot" style={{ backgroundColor: 'var(--primary)' }} />
+                Saldo geral
+              </span>
+              <div className={`stat-value ${balanceClass(totals.grandTotal.balance)}`}>
+                {formatBRL(totals.grandTotal.balance)}
+              </div>
+            </div>
+          </div>
+
+          {/* Per-person breakdown */}
+          {totals.people.length === 0 ? (
+            <div className="empty-state">
+              <span className="empty-state-icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 20V10M12 20V4M6 20v-6" />
+                </svg>
+              </span>
+              <p>Nenhum dado disponível ainda.</p>
+            </div>
+          ) : (
+            <div className="table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>Total receitas</th>
+                    <th>Total despesas</th>
+                    <th>Saldo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {totals.people.map((pt) => (
+                    <tr key={pt.personId}>
+                      <td>{pt.name}</td>
+                      <td>{formatBRL(pt.totalIncome)}</td>
+                      <td>{formatBRL(pt.totalExpenses)}</td>
+                      <td className={balanceClass(pt.balance)}>{formatBRL(pt.balance)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td>Total geral</td>
+                    <td>{formatBRL(totals.grandTotal.totalIncome)}</td>
+                    <td>{formatBRL(totals.grandTotal.totalExpenses)}</td>
+                    <td className={balanceClass(totals.grandTotal.balance)}>
+                      {formatBRL(totals.grandTotal.balance)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+        </>
       )}
     </main>
   );

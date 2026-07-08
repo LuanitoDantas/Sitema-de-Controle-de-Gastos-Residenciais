@@ -101,52 +101,53 @@ export default function TransactionsPage() {
   }
 
   return (
-    <main style={{ padding: '2rem' }}>
-      <h1>Transações</h1>
+    <main>
+      <header className="page-header">
+        <span className="page-eyebrow">Transações</span>
+        <h1>Receitas e despesas</h1>
+        <p className="page-subtitle">Registre cada movimentação financeira e vincule à pessoa responsável.</p>
+      </header>
 
       {message && (
-        <p
-          style={{
-            padding: '0.75rem 1rem',
-            borderRadius: '4px',
-            backgroundColor: message.isError ? '#fdecea' : '#e8f5e9',
-            color: message.isError ? '#b71c1c' : '#1b5e20',
-            marginBottom: '1rem',
-          }}
-        >
-          {message.text}
-        </p>
+        <p className={`message-banner ${message.isError ? 'error' : 'success'}`}>{message.text}</p>
       )}
 
       {/* Add Transaction Form */}
-      <section style={{ marginBottom: '2rem' }}>
-        <h2>Adicionar Transação</h2>
-        <form onSubmit={handleAddTransaction} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: '480px' }}>
-          <input
-            type="text"
-            placeholder="Descrição"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            required
-            className="form-input"
-          />
-
-          <input
-            type="number"
-            placeholder="Valor (R$)"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            required
-            min="0.01"
-            step="0.01"
-            className="form-input"
-          />
+      <section className="card">
+        <h2>Adicionar transação</h2>
+        <form onSubmit={handleAddTransaction} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem', maxWidth: '520px' }}>
+          <div className="form-row">
+            <div className="form-field">
+              <label className="form-label" htmlFor="tx-description">Descrição</label>
+              <input
+                id="tx-description"
+                type="text"
+                placeholder="Ex: Supermercado"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                required
+                className="form-input"
+              />
+            </div>
+            <div className="form-field">
+              <label className="form-label" htmlFor="tx-value">Valor (R$)</label>
+              <input
+                id="tx-value"
+                type="number"
+                placeholder="0,00"
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                required
+                min="0.01"
+                step="0.01"
+                className="form-input"
+              />
+            </div>
+          </div>
 
           {/* Person selector */}
-          <div>
-            <label htmlFor="person-select" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>
-              Pessoa
-            </label>
+          <div className="form-field">
+            <label className="form-label" htmlFor="person-select">Pessoa</label>
             <select
               id="person-select"
               value={personId}
@@ -164,91 +165,91 @@ export default function TransactionsPage() {
           </div>
 
           {/* Type selector — income is disabled for minors */}
-          <div>
-            <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 500 }}>Tipo</label>
+          <div className="form-field">
+            <span className="form-label">Tipo</span>
 
             {/* Business rule warning shown when the selected person is under 18 */}
             {isMinor && (
-              <p style={{ color: '#e65100', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+              <span className="inline-warning">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <path d="M12 9v4M12 17h.01" />
+                </svg>
                 Menor de idade: apenas despesas permitidas
-              </p>
+              </span>
             )}
 
-            <label style={{ marginRight: '1.5rem', cursor: 'pointer' }}>
-              <input
-                type="radio"
-                name="type"
-                value="expense"
-                checked={type === 'expense'}
-                onChange={() => setType('expense')}
-                style={{ marginRight: '0.3rem' }}
-              />
-              Despesa
-            </label>
+            <div className="segmented">
+              <label className={`segmented-option expense ${type === 'expense' ? 'selected' : ''}`}>
+                <input
+                  type="radio"
+                  name="type"
+                  value="expense"
+                  checked={type === 'expense'}
+                  onChange={() => setType('expense')}
+                />
+                Despesa
+              </label>
 
-            <label
-              style={{
-                cursor: isMinor ? 'not-allowed' : 'pointer',
-                opacity: isMinor ? 0.4 : 1,
-              }}
-            >
-              <input
-                type="radio"
-                name="type"
-                value="income"
-                checked={type === 'income'}
-                onChange={() => setType('income')}
-                disabled={isMinor}
-                style={{ marginRight: '0.3rem' }}
-              />
-              Receita
-            </label>
+              <label className={`segmented-option income ${type === 'income' ? 'selected' : ''} ${isMinor ? 'disabled' : ''}`}>
+                <input
+                  type="radio"
+                  name="type"
+                  value="income"
+                  checked={type === 'income'}
+                  onChange={() => setType('income')}
+                  disabled={isMinor}
+                />
+                Receita
+              </label>
+            </div>
           </div>
 
           <button type="submit" disabled={loading || people.length === 0} className="btn btn-primary" style={{ alignSelf: 'flex-start' }}>
-            {loading ? 'Adicionando...' : 'Adicionar'}
+            {loading ? 'Adicionando…' : 'Adicionar'}
           </button>
         </form>
       </section>
 
       {/* Transactions Table */}
-      <section>
-        <h2>Lista de Transações</h2>
+      <section style={{ marginTop: '1.5rem' }}>
+        <h2>Lista de transações</h2>
         {transactions.length === 0 ? (
-          <p>Nenhuma transação registrada.</p>
+          <div className="empty-state">
+            <span className="empty-state-icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 1l4 4-4 4" /><path d="M3 11V9a4 4 0 0 1 4-4h14" /><path d="M7 23l-4-4 4-4" /><path d="M21 13v2a4 4 0 0 1-4 4H3" />
+              </svg>
+            </span>
+            <p>Nenhuma transação registrada ainda.</p>
+          </div>
         ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Descrição</th>
-                <th>Valor</th>
-                <th>Tipo</th>
-                <th>Pessoa</th>
-              </tr>
-            </thead>
-            <tbody>
-              {transactions.map((tx) => (
-                <tr key={tx.id}>
-                  <td>{tx.description}</td>
-                  <td>{formatBRL(tx.value)}</td>
-                  <td>
-                    <span
-                      style={{
-                        padding: '2px 8px',
-                        borderRadius: '12px',
-                        fontSize: '0.85rem',
-                        backgroundColor: tx.type === 'income' ? '#e8f5e9' : '#fdecea',
-                        color: tx.type === 'income' ? '#2e7d32' : '#c62828',
-                      }}
-                    >
-                      {tx.type === 'income' ? 'Receita' : 'Despesa'}
-                    </span>
-                  </td>
-                  <td>{resolvePersonName(tx.personId)}</td>
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Descrição</th>
+                  <th>Valor</th>
+                  <th>Tipo</th>
+                  <th>Pessoa</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {transactions.map((tx) => (
+                  <tr key={tx.id}>
+                    <td>{tx.description}</td>
+                    <td>{formatBRL(tx.value)}</td>
+                    <td>
+                      <span className={`badge ${tx.type === 'income' ? 'badge-income' : 'badge-expense'}`}>
+                        {tx.type === 'income' ? 'Receita' : 'Despesa'}
+                      </span>
+                    </td>
+                    <td>{resolvePersonName(tx.personId)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </main>

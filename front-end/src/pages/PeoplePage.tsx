@@ -3,6 +3,14 @@ import type { FormEvent } from 'react';
 import { getAllPeople, createPerson, deletePerson } from '../services/peopleService';
 import type { Person } from '../types';
 
+/** Derives a two-letter avatar initial from a person's full name. */
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  const first = parts[0]?.[0] ?? '';
+  const last = parts.length > 1 ? parts[parts.length - 1][0] : '';
+  return (first + last).toUpperCase();
+}
+
 export default function PeoplePage() {
   const [people, setPeople] = useState<Person[]>([]);
   const [name, setName] = useState('');
@@ -67,85 +75,99 @@ export default function PeoplePage() {
   }
 
   return (
-    <main style={{ padding: '2rem' }}>
-      <h1>Pessoas</h1>
+    <main>
+      <header className="page-header">
+        <span className="page-eyebrow">Pessoas</span>
+        <h1>Quem faz parte da casa</h1>
+        <p className="page-subtitle">Cadastre as pessoas para depois vincular receitas e despesas a cada uma.</p>
+      </header>
 
-      {/* Inline feedback message */}
       {message && (
-        <p
-          style={{
-            padding: '0.75rem 1rem',
-            borderRadius: '4px',
-            backgroundColor: message.isError ? '#fdecea' : '#e8f5e9',
-            color: message.isError ? '#b71c1c' : '#1b5e20',
-            marginBottom: '1rem',
-          }}
-        >
-          {message.text}
-        </p>
+        <p className={`message-banner ${message.isError ? 'error' : 'success'}`}>{message.text}</p>
       )}
 
       {/* Add Person Form */}
-      <section style={{ marginBottom: '2rem' }}>
-        <h2>Adicionar Pessoa</h2>
-        <form onSubmit={handleAddPerson} style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <input
-            type="text"
-            placeholder="Nome"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            className="form-input"
-          />
-          <input
-            type="number"
-            placeholder="Idade"
-            value={age}
-            onChange={(e) => setAge(e.target.value)}
-            required
-            min={1}
-            className="form-input"
-            style={{ width: '100px' }}
-          />
+      <section className="card">
+        <h2>Adicionar pessoa</h2>
+        <form onSubmit={handleAddPerson} className="form-row" style={{ alignItems: 'flex-end' }}>
+          <div className="form-field">
+            <label className="form-label" htmlFor="person-name">Nome</label>
+            <input
+              id="person-name"
+              type="text"
+              placeholder="Ex: Maria Silva"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              className="form-input"
+            />
+          </div>
+          <div className="form-field" style={{ flex: '0 1 120px' }}>
+            <label className="form-label" htmlFor="person-age">Idade</label>
+            <input
+              id="person-age"
+              type="number"
+              placeholder="30"
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              required
+              min={1}
+              className="form-input"
+            />
+          </div>
           <button type="submit" disabled={loading} className="btn btn-primary">
-            {loading ? 'Adicionando...' : 'Adicionar'}
+            {loading ? 'Adicionando…' : 'Adicionar'}
           </button>
         </form>
       </section>
 
       {/* People Table */}
-      <section>
-        <h2>Lista de Pessoas</h2>
+      <section style={{ marginTop: '1.5rem' }}>
+        <h2>Lista de pessoas</h2>
         {people.length === 0 ? (
-          <p>Nenhuma pessoa cadastrada.</p>
+          <div className="empty-state">
+            <span className="empty-state-icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+              </svg>
+            </span>
+            <p>Nenhuma pessoa cadastrada ainda.</p>
+          </div>
         ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Nome</th>
-                <th>Idade</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {people.map((person) => (
-                <tr key={person.id}>
-                  <td style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#555' }}>{person.id}</td>
-                  <td>{person.name}</td>
-                  <td>{person.age}</td>
-                  <td>
-                    <button
-                      onClick={() => handleDelete(person)}
-                      className="btn btn-danger"
-                    >
-                      Excluir
-                    </button>
-                  </td>
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Pessoa</th>
+                  <th>Idade</th>
+                  <th>ID</th>
+                  <th />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {people.map((person) => (
+                  <tr key={person.id}>
+                    <td>
+                      <div className="person-cell">
+                        <span className="avatar" aria-hidden="true">{initials(person.name)}</span>
+                        {person.name}
+                      </div>
+                    </td>
+                    <td>{person.age} anos</td>
+                    <td className="cell-muted">{person.id}</td>
+                    <td>
+                      <button
+                        onClick={() => handleDelete(person)}
+                        className="btn btn-danger"
+                      >
+                        Excluir
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </main>
