@@ -17,20 +17,26 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
     });
 
-// Register AppDbContext backed by an in-memory database.
-// "GastosResidenciaisDb" is the database name; it lives purely in RAM,
-// so all data is wiped when the process exits — perfect for local dev/testing
-// without needing a real SQL Server instance.
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseInMemoryDatabase("GastosResidenciaisDb"));
+// Resolve the Postgres connection string. Railway's Postgres plugin injects a
+// DATABASE_URL env var in the "postgres://user:pass@host:port/db" URI format,
+// which Npgsql doesn't accept directly, so it's converted below. Locally, fall
+// back to ConnectionStrings:DefaultConnection from appsettings/user-secrets.
+var connectionString = BuildConnectionString(builder.Configuration);
 
-// CORS policy that allows the React dev server (Vite default port) to call this API.
-// All HTTP methods and headers are permitted to keep development friction low.
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(connectionString));
+
+// CORS origins allowed to call this API. Comma-separated list via CORS_ORIGINS
+// env var so the deployed frontend URL can be added without a code change;
+// defaults to the Vite dev server for local development.
+var corsOrigins = (builder.Configuration["CORS_ORIGINS"] ?? "http://localhost:5173")
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:5173")
+        policy.WithOrigins(corsOrigins)
               .AllowAnyMethod()
               .AllowAnyHeader();
     });
@@ -42,14 +48,49 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Apply any pending EF Core migrations on startup so a fresh Railway Postgres
+// database is schema-ready without a manual migration step.
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.Migrate();
+}
+
 // Apply CORS before routing/controllers so the middleware intercepts every request.
 app.UseCors("AllowFrontend");
 
 app.UseAuthorization();
 app.MapControllers();
 
-// Override the default port so the API is always reachable at http://localhost:5000,
-// regardless of what launchSettings.json says or how the process is started.
-app.Urls.Add("http://localhost:5000");
+// Railway assigns the public port via the PORT env var and routes traffic to it;
+// binding to a fixed port would fail health checks, so PORT takes priority and
+// port 5000 remains only as the local-dev default.
+var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
+app.Urls.Add($"http://0.0.0.0:{port}");
 
 app.Run();
+
+static string BuildConnectionString(IConfiguration configuration)
+{
+    var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+    if (string.IsNullOrEmpty(databaseUrl))
+    {
+        return configuration.GetConnectionString("DefaultConnection")
+            ?? throw new InvalidOperationException(
+                "No database connection configured. Set DATABASE_URL or ConnectionStrings:DefaultConnection.");
+    }
+
+    // Railway provides DATABASE_URL as a URI: postgres://user:password@host:port/database
+    var uri = new Uri(databaseUrl);
+    var userInfo = uri.UserInfo.Split(':', 2);
+
+    return new Npgsql.NpgsqlConnectionStringBuilder
+    {
+        Host = uri.Host,
+        Port = uri.Port,
+        Username = userInfo[0],
+        Password = userInfo.Length > 1 ? userInfo[1] : string.Empty,
+        Database = uri.AbsolutePath.TrimStart('/'),
+        SslMode = Npgsql.SslMode.Require
+    }.ConnectionString;
+}

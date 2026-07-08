@@ -5,7 +5,7 @@ namespace GastosResidenciais.API.Data;
 
 /// <summary>
 /// EF Core database context for the residential expense control system.
-/// Uses an in-memory database — no SQL Server or file-based storage required.
+/// Backed by PostgreSQL (see Program.cs for connection string resolution).
 /// </summary>
 public class AppDbContext : DbContext
 {
