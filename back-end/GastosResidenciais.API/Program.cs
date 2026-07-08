@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using GastosResidenciais.API.Data;
+using GastosResidenciais.API.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -25,6 +26,11 @@ var connectionString = BuildConnectionString(builder.Configuration);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
+
+// Public demo with no per-visitor isolation: periodically wipe People/Transactions
+// so testers don't keep piling data on top of each other. Interval configurable
+// via RESET_INTERVAL_HOURS; defaults to every 6 hours.
+builder.Services.AddHostedService<DatabaseResetService>();
 
 // CORS origins allowed to call this API. Comma-separated list via CORS_ORIGINS
 // env var so the deployed frontend URL can be added without a code change;
