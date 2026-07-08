@@ -91,6 +91,9 @@ static string BuildConnectionString(IConfiguration configuration)
         Username = userInfo[0],
         Password = userInfo.Length > 1 ? userInfo[1] : string.Empty,
         Database = uri.AbsolutePath.TrimStart('/'),
-        SslMode = Npgsql.SslMode.Require
+        // Prefer (not Require): Railway's internal Postgres network doesn't need TLS,
+        // and Require would also validate the server certificate, which fails against
+        // Railway's self-signed cert and crashes the app before it can bind the port.
+        SslMode = Npgsql.SslMode.Prefer
     }.ConnectionString;
 }
